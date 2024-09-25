@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en" >
+<head>
+  <meta charset="UTF-8">
+  <title>CodePen - Insumos</title>
+  
+
+</head>
+<body>
+<!-- partial:index.partial.html -->
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Control de Stock de Insumos</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f4f4f4;
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+        form {
+            margin-bottom: 20px;
+            background-color: #fff;
+            padding: 15px;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+        input[type="text"], input[type="number"], input[type="file"] {
+            width: calc(100% - 20px);
+            padding: 10px;
+            margin: 5px 0;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        button {
+            padding: 10px;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-top: 10px;
+        }
+        button:hover {
+            background-color: #218838;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            border: 1px solid #ccc;
+            padding: 10px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        .bajo-stock {
+            background-color: #f8d7da; /* Color de fondo rojo claro */
+        }
+        img {
+            max-width: 50px;
+            max-height: 50px;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Control de Stock de Insumos</h1>
+    <form id="stockForm">
+        <input type="text" id="codigo" placeholder="Código de Insumo" required>
+        <input type="text" id="descripcion" placeholder="Descripción" required>
+        <input type="number" id="cantidad" placeholder="Cantidad" required min="0">
+        <input type="file" id="imagen" accept="image/*">
+        <button type="submit">Agregar Insumo</button>
+    </form>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Código</th>
+                <th>Descripción</th>
+                <th>Cantidad</th>
+                <th>Imagen</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody id="stockTableBody">
+            <!-- Los insumos se agregarán aquí -->
+        </tbody>
+    </table>
+
+    <script>
+        document.getElementById('stockForm').addEventListener('submit', function(event) {
+            event.preventDefault();
+            
+            const codigo = document.getElementById('codigo').value;
+            const descripcion = document.getElementById('descripcion').value;
+            const cantidad = document.getElementById('cantidad').value;
+            const imagen = document.getElementById('imagen').files[0];
+
+            const reader = new FileReader();
+            reader.onloadend = function() {
+                const insumo = {
+                    codigo,
+                    descripcion,
+                    cantidad: parseInt(cantidad), // Asegurarse de que sea un número
+                    imagen: reader.result
+                };
+                agregarInsumo(insumo);
+            };
+            if (imagen) {
+                reader.readAsDataURL(imagen);
+            } else {
+                agregarInsumo({ codigo, descripcion, cantidad: parseInt(cantidad), imagen: '' });
+            }
+        });
+
+        function agregarInsumo(insumo) {
+            let insumos = JSON.parse(localStorage.getItem('insumos')) || [];
+            insumos.push(insumo);
+            localStorage.setItem('insumos', JSON.stringify(insumos));
+            mostrarInsumos();
+            document.getElementById('stockForm').reset();
+        }
+
+        function mostrarInsumos() {
+            const insumos = JSON.parse(localStorage.getItem('insumos')) || [];
+            const tbody = document.getElementById('stockTableBody');
+            tbody.innerHTML = '';
+
+            insumos.forEach((insumo, index) => {
+                const row = document.createElement('tr');
+                row.className = insumo.cantidad <= 20 ? 'bajo-stock' : ''; // Resaltar insumos con 20 o menos unidades
+                row.innerHTML = `
+                    <td>${insumo.codigo}</td>
+                    <td>${insumo.descripcion}</td>
+                    <td>
+                        <input type="number" value="${insumo.cantidad}" onchange="modificarCantidad(${index}, this.value)" min="0">
+                    </td>
+                    <td><img src="${insumo.imagen}" alt="Imagen"></td>
+                    <td><button onclick="eliminarInsumo(${index})">Eliminar</button></td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        function modificarCantidad(index, nuevaCantidad) {
+            let insumos = JSON.parse(localStorage.getItem('insumos')) || [];
+            insumos[index].cantidad = parseInt(nuevaCantidad);
+            localStorage.setItem('insumos', JSON.stringify(insumos));
+            mostrarInsumos();
+        }
+
+        function eliminarInsumo(index) {
+            let insumos = JSON.parse(localStorage.getItem('insumos')) || [];
+            insumos.splice(index, 1);
+            localStorage.setItem('insumos', JSON.stringify(insumos));
+            mostrarInsumos();
+        }
+
+        // Mostrar insumos al cargar la página
+        mostrarInsumos();
+    </script>
+
+</body>
+</html>
+<!-- partial -->
+  
+</body>
+</html>
