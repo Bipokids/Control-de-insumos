@@ -1,14 +1,4 @@
 <!DOCTYPE html>
-<html lang="en" >
-<head>
-  <meta charset="UTF-8">
-  <title>CodePen - Insumos</title>
-  
-
-</head>
-<body>
-<!-- partial:index.partial.html -->
-<!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
@@ -23,32 +13,21 @@
         }
         h1 {
             text-align: center;
-            color: #333;
         }
         form {
             margin-bottom: 20px;
-            background-color: #fff;
-            padding: 15px;
-            border-radius: 5px;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
         }
         input[type="text"], input[type="number"], input[type="file"] {
             width: calc(100% - 20px);
             padding: 10px;
             margin: 5px 0;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            font-size: 14px;
         }
         button {
             padding: 10px;
             background-color: #28a745;
             color: white;
             border: none;
-            border-radius: 4px;
             cursor: pointer;
-            font-size: 14px;
-            margin-top: 10px;
         }
         button:hover {
             background-color: #218838;
@@ -60,19 +39,11 @@
         }
         th, td {
             border: 1px solid #ccc;
-            padding: 10px;
+            padding: 8px;
             text-align: left;
-        }
-        th {
-            background-color: #f2f2f2;
         }
         .bajo-stock {
             background-color: #f8d7da; /* Color de fondo rojo claro */
-        }
-        img {
-            max-width: 50px;
-            max-height: 50px;
-            border-radius: 4px;
         }
     </style>
 </head>
@@ -82,7 +53,7 @@
     <form id="stockForm">
         <input type="text" id="codigo" placeholder="Código de Insumo" required>
         <input type="text" id="descripcion" placeholder="Descripción" required>
-        <input type="number" id="cantidad" placeholder="Cantidad" required min="0">
+        <input type="number" id="cantidad" placeholder="Cantidad" required>
         <input type="file" id="imagen" accept="image/*">
         <button type="submit">Agregar Insumo</button>
     </form>
@@ -103,6 +74,9 @@
     </table>
 
     <script>
+        const API_URL = 'https://api.airtable.com/v0/appLkNDICXNqxSDhG/Insumos'; // Reemplaza con tu Base ID
+        const API_KEY = 'patbD6zJb6hY9b75e.bdb991d128eb06d6540893d2cb244639e6b165ac4311d2b70372fef40a5c65dc'; // Reemplaza con tu API Key
+
         document.getElementById('stockForm').addEventListener('submit', function(event) {
             event.preventDefault();
             
@@ -114,70 +88,105 @@
             const reader = new FileReader();
             reader.onloadend = function() {
                 const insumo = {
-                    codigo,
-                    descripcion,
-                    cantidad: parseInt(cantidad), // Asegurarse de que sea un número
-                    imagen: reader.result
+                    fields: {
+                        "Código": codigo,
+                        "Descripción": descripcion,
+                        "Cantidad": parseInt(cantidad),
+                        "Imagen": reader.result
+                    }
                 };
                 agregarInsumo(insumo);
             };
             if (imagen) {
                 reader.readAsDataURL(imagen);
             } else {
-                agregarInsumo({ codigo, descripcion, cantidad: parseInt(cantidad), imagen: '' });
+                agregarInsumo({ fields: { "Código": codigo, "Descripción": descripcion, "Cantidad": parseInt(cantidad), "Imagen": '' } });
             }
         });
 
         function agregarInsumo(insumo) {
-            let insumos = JSON.parse(localStorage.getItem('insumos')) || [];
-            insumos.push(insumo);
-            localStorage.setItem('insumos', JSON.stringify(insumos));
-            mostrarInsumos();
-            document.getElementById('stockForm').reset();
+            fetch(API_URL, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${API_KEY}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(insumo)
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log(data);
+                mostrarInsumos();
+                document.getElementById('stockForm').reset();
+            })
+            .catch(error => console.error('Error:', error));
         }
 
         function mostrarInsumos() {
-            const insumos = JSON.parse(localStorage.getItem('insumos')) || [];
-            const tbody = document.getElementById('stockTableBody');
-            tbody.innerHTML = '';
+            fetch(API_URL, {
+                headers: {
+                    'Authorization': `Bearer ${API_KEY}`,
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                const tbody = document.getElementById('stockTableBody');
+                tbody.innerHTML = '';
 
-            insumos.forEach((insumo, index) => {
-                const row = document.createElement('tr');
-                row.className = insumo.cantidad <= 20 ? 'bajo-stock' : ''; // Resaltar insumos con 20 o menos unidades
-                row.innerHTML = `
-                    <td>${insumo.codigo}</td>
-                    <td>${insumo.descripcion}</td>
-                    <td>
-                        <input type="number" value="${insumo.cantidad}" onchange="modificarCantidad(${index}, this.value)" min="0">
-                    </td>
-                    <td><img src="${insumo.imagen}" alt="Imagen"></td>
-                    <td><button onclick="eliminarInsumo(${index})">Eliminar</button></td>
-                `;
-                tbody.appendChild(row);
-            });
+                data.records.forEach((record, index) => {
+                    const insumo = record.fields;
+                    const row = document.createElement('tr');
+                    row.className = insumo.Cantidad <= 20 ? 'bajo-stock' : ''; // Resaltar insumos con 20 o menos unidades
+                    row.innerHTML = `
+                        <td>${insumo.Código}</td>
+                        <td>${insumo.Descripción}</td>
+                        <td>
+                            <input type="number" value="${insumo.Cantidad}" onchange="modificarCantidad('${record.id}', this.value)">
+                        </td>
+                        <td><img src="${insumo.Imagen}" alt="Imagen" style="width: 50px;"></td>
+                        <td><button onclick="eliminarInsumo('${record.id}')">Eliminar</button></td>
+                    `;
+                    tbody.appendChild(row);
+                });
+            })
+            .catch(error => console.error('Error:', error));
         }
 
-        function modificarCantidad(index, nuevaCantidad) {
-            let insumos = JSON.parse(localStorage.getItem('insumos')) || [];
-            insumos[index].cantidad = parseInt(nuevaCantidad);
-            localStorage.setItem('insumos', JSON.stringify(insumos));
-            mostrarInsumos();
+        function modificarCantidad(id, nuevaCantidad) {
+            fetch(`${API_URL}/${id}`, {
+                method: 'PATCH',
+                headers: {
+                    'Authorization': `Bearer ${API_KEY}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ fields: { "Cantidad": parseInt(nuevaCantidad) } })
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log(data);
+                mostrarInsumos();
+            })
+            .catch(error => console.error('Error:', error));
         }
 
-        function eliminarInsumo(index) {
-            let insumos = JSON.parse(localStorage.getItem('insumos')) || [];
-            insumos.splice(index, 1);
-            localStorage.setItem('insumos', JSON.stringify(insumos));
-            mostrarInsumos();
+        function eliminarInsumo(id) {
+            fetch(`${API_URL}/${id}`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${API_KEY}`,
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(() => {
+                mostrarInsumos();
+            })
+            .catch(error => console.error('Error:', error));
         }
 
         // Mostrar insumos al cargar la página
         mostrarInsumos();
     </script>
 
-</body>
-</html>
-<!-- partial -->
-  
 </body>
 </html>
